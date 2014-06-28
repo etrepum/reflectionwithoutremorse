@@ -35,6 +35,9 @@ buildStack :: Member (State Int) r => Int -> Eff r ()
 buildStack n | n == 0 = return ()
              | otherwise = buildStack (n - 1) >> modify (+ 1) 
 
+main :: IO ()
+main = return (runTest $! 2500) >> return ()
+
 {- With BeforeFix.Eff (original)
 
 performance is quadratic:

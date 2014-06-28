@@ -24,7 +24,7 @@ import Data.Typeable
 -- The data constructor Union is not exported
 
 data Union r v where                      -- r is of a kind [*->*]
-  Union :: (Functor t, Typeable1 t) => Id (t v) -> Union r v
+  Union :: (Functor t, Typeable t) => Id (t v) -> Union r v
 
 newtype Id x = Id x                     -- for the sake of gcast1
 
@@ -33,20 +33,20 @@ instance Functor (Union r) where
     fmap f (Union (Id v)) = Union (Id (fmap f v))
 
 {-# INLINE inj #-}
-inj :: (Functor t, Typeable1 t, Member t r) => t v -> Union r v
+inj :: (Functor t, Typeable t, Member t r) => t v -> Union r v
 inj x = Union (Id x)
 
 {-# INLINE prj #-}
-prj :: (Functor t, Typeable1 t, Member t r) => Union r v -> Maybe (t v)
+prj :: (Functor t, Typeable t, Member t r) => Union r v -> Maybe (t v)
 prj (Union v) | Just (Id x) <- gcast1 v = Just x
 prj _ = Nothing
 
 {-# INLINE decomp #-}
-decomp :: Typeable1 t => Union (t :> r) v -> Either (Union r v) (t v)
+decomp :: Typeable t => Union (t :> r) v -> Either (Union r v) (t v)
 decomp (Union v) | Just (Id x) <- gcast1 v = Right x
 decomp (Union v) = Left (Union v)
 
-weaken :: (Typeable1 t, Functor t) => Union r w -> Union (t :> r) w
+weaken :: (Typeable t, Functor t) => Union r w -> Union (t :> r) w
 weaken (Union x) = Union x
 
 class Member (t :: * -> *) r

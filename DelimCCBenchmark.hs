@@ -25,6 +25,8 @@ test n =
      noop = pushPrompt q $ pushSubCont sk $ abort q (return 0)
 
 
+main = (return $! doTest 10000) >> return ()
+
 doTest n = runIdentity $ runCCT $ test n
 
 {- Benchmark results for Control.Monad.CC:

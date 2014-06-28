@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeSynonymInstances,Rank2Types,FlexibleInstances,UndecidableInstances #-}
-module DiffCategory where
+module CPS.DiffCategory where
 import Control.Category
 import Prelude hiding ((.),id)
 

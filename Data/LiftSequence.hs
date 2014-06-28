@@ -32,7 +32,7 @@ instance Sequence s => TSequence (LiftSeq s) where
 
   tviewr (LiftSeq l) = case viewr l of
     EmptyR -> unsafeCoerce TEmptyR
-    p :> l -> LiftSeq p :|< unsafeCoerce l
+    p :> l' -> LiftSeq p :|< unsafeCoerce l'
   
   
 

@@ -1,4 +1,4 @@
-module Fixed.Tree(TreeView(..),Tree, (<.|), fromView,toView) where
+module Fixed.Tree(TreeView(..),TreeD, (<.|), fromView,toView) where
 
 import Data.FastCQueue
 

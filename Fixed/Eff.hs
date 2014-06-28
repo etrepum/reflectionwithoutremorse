@@ -8,7 +8,6 @@
 
 module Fixed.Eff where
 
-import Control.Monad
 import Data.Typeable
 import Data.OpenUnion1
 import Fixed.FreeMonad
@@ -18,9 +17,6 @@ import Fixed.FreeMonad
 
 
 type Eff r a = FreeMonad (Union r) a
-
-instance Functor f => Functor (FreeMonad f) where
-  fmap = liftM 
 
 
 
@@ -39,19 +35,20 @@ data Void -- no constructors
 -- only pure computations may be run.
 run :: Eff Void w -> w
 run (toView -> Pure a) = a
+run _ = error "Only pure computations may be run"
 
 -- A convenient pattern: given a request (open union), either
 -- handle it or relay it.
-handle_relay :: Typeable1 t =>
+handle_relay :: Typeable t =>
      Union (t :> r) v -> (v -> Eff r a) -> (t v -> Eff r a) -> Eff r a
 handle_relay u loop h = case decomp u of
   Right x -> h x
-  Left u  -> send u >>= loop
+  Left u'  -> send u' >>= loop
 
 -- Add something like Control.Exception.catches? It could be useful
 -- for control with cut.
 
-interpose :: (Typeable1 t, Functor t, Member t r) =>
+interpose :: (Typeable t, Functor t, Member t r) =>
      Union r v -> (v -> Eff r a) -> (t v -> Eff r a) -> Eff r a
 interpose u loop h = case prj u of
   Just x -> h x
@@ -73,9 +70,10 @@ get =  send (inj (State id id))
 
 runState :: Typeable s => Eff (State s :> r) w -> s -> Eff r (w,s)
 runState m s = loop s m where
- loop s (toView -> Pure x) = return (x,s)
- loop s (toView -> Impure u) = handle_relay u (loop s) $
-                       \(State t k) -> let s' = t s in s' `seq` loop s' (k s')
+ loop s' (toView -> Pure x) = return (x,s')
+ loop s' (toView -> Impure u) = handle_relay u (loop s') $
+                       \(State t k) -> let s'' = t s' in s'' `seq` loop s'' (k s'')
+ loop _ _ = error "unreachable"
 
 -- ------------------------------------------------------------------------
 -- Non-determinism (choice)
@@ -95,6 +93,8 @@ choose lst = send (inj $ Choose lst id)
 
 mzero' :: Member Choose r => Eff r a
 mzero' = choose []
+
+mplus' :: Member Choose r => Eff r a -> Eff r a -> Eff r a
 mplus' m1 m2 = choose [m1,m2] >>= id
 
 
@@ -104,6 +104,7 @@ makeChoice = loop
  where
  loop (toView -> Pure x)   = return [x]
  loop (toView -> Impure u) = handle_relay u loop (\(Choose lst k) -> handle lst k)
+ loop _                    = error "unreachable"
  -- Need the signature since local bindings aren't polymorphic any more
  handle :: [t] -> (t -> Eff (Choose :> r) a) -> Eff r [a]
  handle [] _  = return []
@@ -127,8 +128,9 @@ ifte t th el = loop [] t
  loop [] (toView -> Pure x)  = th x
  -- add all other latent choices of t to th x
  -- this is like reflection of t
- loop jq (toView -> Pure x)  = choose ((th x) : map (\t -> t >>= th) jq) >>= id 
+ loop jq (toView -> Pure x)  = choose ((th x) : map (\t' -> t' >>= th) jq) >>= id 
  loop jq (toView -> Impure u)    = interpose u (loop jq) (\(Choose lst k) -> handle jq lst k)
+ loop _  _                    = error "unreachable"
  -- Need the signature since local bindings aren't polymorphic any more
  handle :: [Eff r a] -> [t] -> (t -> Eff r a) -> Eff r b
  handle [] [] _     = el                    -- no more choices left
@@ -164,5 +166,6 @@ runC m = loop m where
  loop (toView -> Pure x) = return (Done x)
  loop (toView -> Impure u)   = case decomp u of
    Right (Yield x c)  -> return (Y x c)
-   Left u             -> send u >>= loop
+   Left u'             -> send u' >>= loop
+ loop _                   = error "unreachable"
 

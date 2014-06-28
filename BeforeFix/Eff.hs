@@ -9,6 +9,7 @@
 module BeforeFix.Eff where
 
 import Control.Monad
+import Control.Applicative
 import Data.Typeable
 import Data.OpenUnion1
 
@@ -32,10 +33,15 @@ newtype Eff r a = Eff{runEff :: forall w. (a -> VE w r) -> VE w r}
 instance Functor (Eff r) where
     fmap f m = Eff $ \k -> runEff m (k . f)
 
+instance Applicative (Eff r) where
+    {-# INLINE pure #-}
+    pure x = Eff $ \k -> k x
+    (<*>)  = ap
+
 instance Monad (Eff r) where
     {-# INLINE return #-}
     {-# INLINE (>>=) #-}
-    return x = Eff $ \k -> k x
+    return = pure
     m >>= f  = Eff $ \k -> runEff m (\v -> runEff (f v) k)
 
 -- send a request and wait for a reply
@@ -56,7 +62,7 @@ reflect (E u) = Eff (\k -> E $ fmap (loop k) u)
  where
  loop :: (a -> VE w r) -> VE a r -> VE w r
  loop k (Val x) = k x
- loop k (E u)   = E $ fmap (loop k) u
+ loop k (E u')   = E $ fmap (loop k) u'
 
 
 -- ------------------------------------------------------------------------
@@ -67,24 +73,26 @@ data Void -- no constructors
 -- The type of run ensures that all effects must be handled:
 -- only pure computations may be run.
 run :: Eff Void w -> w
-run m = case admin m of Val x -> x
+run m = case admin m of
+    Val x -> x
+    _     -> error "unreachable: Void has no constructors"
 -- the other case is unreachable since Void has no constructors
 -- Therefore, run is a total function if m Val terminates.
 
 -- A convenient pattern: given a request (open union), either
 -- handle it or relay it.
-handle_relay :: Typeable1 t =>
+handle_relay :: Typeable t =>
      Union (t :> r) v -> (v -> Eff r a) -> (t v -> Eff r a) -> Eff r a
 handle_relay u loop h = case decomp u of
   Right x -> h x
-  Left u  -> send (\k -> fmap k u) >>= loop
+  Left u'  -> send (\k -> fmap k u') >>= loop
   -- perhaps more efficient:
   -- Left u  -> send (\k -> fmap (\w -> runEff (loop w) k) u)
 
 -- Add something like Control.Exception.catches? It could be useful
 -- for control with cut.
 
-interpose :: (Typeable1 t, Functor t, Member t r) =>
+interpose :: (Typeable t, Functor t, Member t r) =>
      Union r v -> (v -> Eff r a) -> (t v -> Eff r a) -> Eff r a
 interpose u loop h = case prj u of
   Just x -> h x
@@ -106,9 +114,9 @@ get = send (\k -> inj (State id k))
 
 runState :: Typeable s => Eff (State s :> r) w -> s -> Eff r (w,s)
 runState m s = loop s (admin m) where
- loop s (Val x) = return (x,s)
- loop s (E u)   = handle_relay u (loop s) $
-                       \(State t k) -> let s' = t s in s' `seq` loop s' (k s')
+ loop s' (Val x) = return (x,s')
+ loop s' (E u)   = handle_relay u (loop s') $
+                       \(State t k) -> let s'' = t s' in s'' `seq` loop s'' (k s'')
 
 -- ------------------------------------------------------------------------
 -- Non-determinism (choice)
@@ -128,6 +136,8 @@ choose lst = send (\k -> inj $ Choose lst k)
 
 mzero' :: Member Choose r => Eff r a
 mzero' = choose []
+
+mplus' :: Member Choose r => Eff r a -> Eff r a -> Eff r a
 mplus' m1 m2 = choose [m1,m2] >>= id
 
 
@@ -159,7 +169,7 @@ ifte t th el = loop [] (admin t)
  loop [] (Val x)  = th x
  -- add all other latent choices of t to th x
  -- this is like reflection of t
- loop jq (Val x)  = choose ((th x) : map (\t -> reflect t >>= th) jq) >>= id 
+ loop jq (Val x)  = choose ((th x) : map (\t' -> reflect t' >>= th) jq) >>= id 
  loop jq (E u)    = interpose u (loop jq) (\(Choose lst k) -> handle jq lst k)
  -- Need the signature since local bindings aren't polymorphic any more
  handle :: [VE a r] -> [t] -> (t -> VE a r) -> Eff r b
@@ -196,4 +206,4 @@ runC m = loop (admin m) where
  loop (Val x) = return (Done x)
  loop (E u)   = case decomp u of
    Right (Yield x c) -> return (Y x (reflect . c))
-   Left u -> send (\k -> fmap k u) >>= loop
+   Left u' -> send (\k -> fmap k u') >>= loop

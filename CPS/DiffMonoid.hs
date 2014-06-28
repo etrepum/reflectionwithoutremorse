@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeSynonymInstances,FlexibleInstances #-}
-module DiffMonoid where
+module CPS.DiffMonoid where
 
 import Data.Monoid
 

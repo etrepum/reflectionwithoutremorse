@@ -2,6 +2,8 @@
 
 module Fixed.FreeMonad(FreeMonadView(..),FreeMonad, fromView,toView) where
 
+import Control.Applicative
+import Control.Monad
 import Data.Interface.TSequence
 import Data.FastTCQueue
 type TCQueue = FastTCQueue
@@ -12,6 +14,8 @@ data FreeMonad f a =
    forall x. FM (FreeMonadView f x) (FMExp f x a)
 data FreeMonadView f a 	= Pure a 
                         | Impure (f (FreeMonad f a))
+
+fromView :: FreeMonadView f a -> FreeMonad f a
 fromView x = FM x tempty
 
 toView :: Functor f => FreeMonad f a -> FreeMonadView f a
@@ -22,10 +26,17 @@ toView (FM h t) = case h of
        FC hc :| tc -> toView (hc x >>>= tc)
    Impure f -> Impure (fmap (>>>= t) f) 
  where (>>>=) :: FreeMonad f a -> FMExp f a b -> FreeMonad f b 
-       (FM h t) >>>= r = FM h (t >< r)
+       (FM h' t') >>>= r = FM h' (t' >< r)
+
+instance Functor (FreeMonad f) where
+  fmap = liftM
+
+instance Applicative (FreeMonad f) where
+  pure = fromView . Pure
+  (<*>) = ap
 
 instance Monad (FreeMonad f) where
-  return = fromView . Pure
+  return = pure
   (FM m r) >>= f = FM m (r >< tsingleton (FC f))
 
 

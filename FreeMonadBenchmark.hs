@@ -38,6 +38,9 @@ feedAll (toView -> Impure (Get f))  (h : t) = feedAll (f h) t
 
 testquadratic n = feedAll (addNbad n) [1..n]
 
+main :: IO ()
+main = (return $! testquadratic 6000) >> return ()
+
 {- Benchmark results for FreeMonads without fix:
 
 Performance is quadratic.

@@ -1,4 +1,6 @@
-module TreeShow where
+--module TreeShow where
+
+import Control.DeepSeq
 
 -- Example from the introduction
 
@@ -165,3 +167,16 @@ tf3probs4 = length $ show3 (tsemifull 31)
 522590
 (3.03 secs, 93693336 bytes)
 -}
+
+main :: IO ()
+main = fs `deepseq` return ()
+  where
+    fs = [ tsprobs1
+         , tsprobs2
+         , tsprobs3
+         , tfprobs1
+         , tfprobs2
+         , tfprobs3
+         , tfprobs4
+         ]
+        

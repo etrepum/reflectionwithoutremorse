@@ -9,9 +9,9 @@
 -}
 
 
-module Data.CFingerTree (module Data.TSequence, CFingerTree ) where
+module Data.CFingerTree (module Data.Interface.TSequence, CFingerTree ) where
 
-import Data.TSequence
+import Data.Interface.TSequence
 
 
 data CFingerTree r a b where
@@ -48,11 +48,13 @@ instance TSequence CFingerTree where
   tviewl (Single a) = a :| Empty
   tviewl (Deep pr m sf) = case toList pr of
               h ::: t -> h :| deepl t m sf
+              _       -> error "unreachable"
 
   tviewr Empty = TEmptyR
   tviewr (Single a) = Empty :|< a 
   tviewr (Deep pr m sf) = case toListR sf of
             h :::< t -> deepr pr m t :|< h
+            _        -> error "unreachable"
 
   xs >< ys = app3 xs ZNil ys
 
@@ -72,6 +74,7 @@ appendd (Two a b)      (One c)        = Three a b c
 appendd (One a)        (Three b c d)  = Four a b c d
 appendd (Two a b)      (Two c d)      = Four a b c d
 appendd (Three a b c)  (One d)        = Four a b c d
+appendd _              _              = error "unreachable"
 
 
 
@@ -85,6 +88,7 @@ data ZList r a b where
   ZNil :: ZList r a a
   (:::) :: r a b -> ZList r b c -> ZList r a c
 
+toList :: Digit r a c -> ZList r a c
 toList (One a) = a ::: ZNil 
 toList (Two a b) = a ::: b ::: ZNil
 toList (Three a b c) = a ::: b ::: c ::: ZNil
@@ -98,6 +102,7 @@ fromList (a ::: ZNil) = One a
 fromList (a ::: b ::: ZNil) = Two a b
 fromList (a ::: b ::: c ::: ZNil) = Three a b c
 fromList (a ::: b ::: c ::: d ::: ZNil) = Four a b c d
+fromList _ = error "unreachable"
 
 append :: ZList r a b -> ZList r b c -> ZList r a c
 append ZNil t = t
@@ -129,9 +134,10 @@ fromListR (a :::< ZNilR) = One a
 fromListR (b :::< a :::< ZNilR) = Two a b
 fromListR (c :::< b :::< a :::< ZNilR) = Three a b c
 fromListR (d :::< c :::< b :::< a :::< ZNilR) = Four a b c d
+fromListR _ = error "unreachable"
 
 
-rev = toList . fromListR 
+-- rev = toList . fromListR 
 
 
 
@@ -173,5 +179,5 @@ nodes (a ::: b ::: ZNil) = Node2 a b ::: ZNil
 nodes (a ::: b ::: c ::: ZNil) = Node3 a b c ::: ZNil
 nodes (a ::: b ::: c ::: d ::: ZNil) = Node2 a b ::: Node2 c d ::: ZNil
 nodes (a ::: b ::: c ::: xs) = Node3 a b c ::: nodes xs
-
+nodes _ = error "unreachable"
 

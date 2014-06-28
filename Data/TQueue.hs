@@ -1,6 +1,6 @@
 {-# LANGUAGE GADTs, DataKinds, TypeOperators #-}
 
-module Data.CTQueue(module Data.TSequence,Q)  where
+module Data.TQueue(module Data.Interface.TSequence,Q)  where
 -- Author : Atze van der Ploeg
 -- a simplified version of Okasaki's implicit recursive
 -- slowdown queues. 
