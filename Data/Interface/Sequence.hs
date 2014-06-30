@@ -2,11 +2,13 @@
 
 module Data.Interface.Sequence where
 
+{-
 import Data.Monoid
 import Data.Foldable
 import Data.Traversable
 import Control.Applicative hiding (empty)
 import Prelude hiding (foldr,foldl)
+-}
 
 class Sequence s where
   empty      :: s a

@@ -13,22 +13,25 @@ show1 (Node x y) = paren $ (show1 x) ++ " " ++ (show1 y)
 paren :: String -> String
 paren x = "(" ++ x ++ ")"
 
-t1 = (Leaf 1 `Node` Leaf 2) `Node` Leaf 3
-t1s1 = show1 t1
+-- t1 = (Leaf 1 `Node` Leaf 2) `Node` Leaf 3
+-- t1s1 = show1 t1
 
 -- build some trees
 tskewed :: Int -> Tree
 tskewed 0 = Leaf 0
 tskewed n = tskewed (n-1) `Node` Leaf n
 
+{-
 tfull :: Int -> Tree
 tfull n = go n 1
  where
    go 0 x = Leaf x
-   go n x = Node (go (n-1) (2*x)) (go (n-1) (2*x+1))
+   go n' x = Node (go (n'-1) (2*x)) (go (n'-1) (2*x+1))
 
+tf5s1 :: String
 tf5s1 = show1 (tfull 3)
 -- "(((8 9) (10 11)) ((12 13) (14 15)))"
+-}
 
 tsemifull :: Int -> Tree
 tsemifull n = go n 1
@@ -36,39 +39,49 @@ tsemifull n = go n 1
    go 0 x = Leaf x
    go 1 x = Leaf x
    go 2 x = Leaf x
-   go n x = Node (go (n-1) (2*x)) (go (n-3) (2*x+1))
+   go n' x = Node (go (n'-1) (2*x)) (go (n'-3) (2*x+1))
 
+{-
+tg5s1 :: String
 tg5s1 = show1 (tsemifull 7)
 -- "(((((32 33) 17) 9) (10 11)) ((12 13) 7))"
+-}
 
 -- performance problem
 
+tsprobs1 :: Int
 tsprobs1 = length $ show1 (tskewed 100)
 {-
 493
 (0.01 secs, 1732868 bytes)
 -}
 
+tsprobs2 :: Int
 tsprobs2 = length $ show1 (tskewed 1000)
 {-
 5894
 (0.60 secs, 162124732 bytes)
 -}
+tsprobs3 :: Int
 tsprobs3 = length $ show1 (tskewed 10000)
 -- takes too long
 
+tfprobs1 :: Int
 tfprobs1 = length $ show1 (tsemifull 25)
 -- 69028
 -- (0.44 secs, 55053456 bytes)
 
+tfprobs2 :: Int
 tfprobs2 = length $ show1 (tsemifull 27)
 -- 155126
 -- (1.08 secs, 130748248 bytes)
 
+tfprobs3 :: Int
 tfprobs3 = length $ show1 (tsemifull 29)
 -- 347272
 -- (2.55 secs, 310292384 bytes)
 
+tfprobs4 :: Int
 tfprobs4 = length $ show1 (tsemifull 31)
 -- 775554
 -- (5.86 secs, 734798260 bytes)
@@ -79,7 +92,6 @@ shows2 :: Tree -> ShowS
 shows2 (Leaf x) = shows x
 shows2 (Node x y) = parens $ (shows2 x) . lit " " . (shows2 y)
 
-
 lit :: String -> ShowS
 lit x = \l -> x ++ l
 
@@ -89,28 +101,36 @@ parens x = lit "(" . x . lit ")"
 show2 :: Tree -> String
 show2 x = shows2 x ""
 
+{-
 tg5s2 = show2 (tsemifull 5)
 -- "((((16 17) 9) (10 11)) ((12 13) 7))"
+-}
 
+ts2probs2 :: Int
 ts2probs2 = length $ show2 (tskewed 1000)
 {-
 5894
 (0.03 secs, 2118276 bytes)
 -}
+
+ts2probs3 :: Int
 ts2probs3 = length $ show2 (tskewed 10000)
 {-
 68895
 (0.25 secs, 9317740 bytes)
 -}
 
+tf2probs2 :: Int
 tf2probs2 = length $ show2 (tsemifull 27)
 -- 155126
 -- (0.81 secs, 26437680 bytes)
 
+tf2probs3 :: Int
 tf2probs3 = length $ show2 (tsemifull 29)
 -- 347272
 -- (1.88 secs, 55337732 bytes)
 
+tf2probs4 :: Int
 tf2probs4 = length $ show2 (tsemifull 31)
 -- 775554
 -- (4.02 secs, 120562296 bytes)
@@ -134,24 +154,29 @@ is_paren _ = False
 show3 :: Tree -> String
 show3 x = shows3 x ""
 
+{-
+tg5s3 :: String
 tg5s3 = show3 (tsemifull 7)
 -- "(((((32 33) 17) 9)(10 11))((12 13) 7))"
+-}
 
+ts3probs2 :: Int
 ts3probs2 = length $ show3 (tskewed 1000)
 -- 5894
 -- (0.04 secs, 2067384 bytes)
+ts3probs3 :: Int
 ts3probs3 = length $ show3 (tskewed 10000)
 -- 68895
 -- (0.34 secs, 11869540 bytes)
-
+tf3probs2 :: Int
 tf3probs2 = length $ show3 (tsemifull 27)
 -- 149231
 -- (0.94 secs, 29482740 bytes)
-
+tf3probs3 :: Int
 tf3probs3 = length $ show3 (tsemifull 29)
 -- 334609
 -- (2.10 secs, 64129572 bytes)
-
+tf3probs4 :: Int
 tf3probs4 = length $ show3 (tsemifull 31)
 -- 748354
 -- (4.66 secs, 139182136 bytes)
@@ -178,5 +203,15 @@ main = fs `deepseq` return ()
          , tfprobs2
          , tfprobs3
          , tfprobs4
+         , tf2probs2
+         , tf2probs3
+         , tf2probs4
+         , ts2probs2
+         , ts2probs3
+         , ts3probs2
+         , ts3probs3
+         , tf3probs2
+         , tf3probs3
+         , tf3probs4
          ]
         

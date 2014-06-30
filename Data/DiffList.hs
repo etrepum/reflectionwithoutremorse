@@ -12,6 +12,7 @@ instance Sequence DL where
      [] -> EmptyL
      (h:t) -> h :< reflect t
 
+reflect :: [a] -> DL a
 reflect l = DL $ \x -> 
   let ref [] = x
       ref (h:t) = h : ref t

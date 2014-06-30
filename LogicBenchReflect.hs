@@ -1,10 +1,6 @@
-
-
 import Control.Monad
 import Control.Monad.Logic.Class
-import Control.Monad.Trans
-import System.Environment 
-import System.IO
+import System.Environment (getArgs)
 
 -- A micro-benchmark of LogicT measuring repeated reflection
 
@@ -21,15 +17,16 @@ seqN :: MonadLogic m => Int -> m a -> m [a]
 seqN n m | n == 0     = return []
          | otherwise  = msplit m >>= \x -> case x of
                           Nothing    -> return []
-                          Just (a,m) -> liftM (a:) $ seqN (n-1) m
+                          Just (a,m') -> liftM (a:) $ seqN (n-1) m'
 
+nats :: MonadLogic m => m Int
 nats = natsFrom 0 where
   natsFrom n = return n `mplus` natsFrom (n + 1)
 
+bench :: Monad m => Int -> m [Int]
 bench n = observeT $ seqN n nats
 
-
-
+main :: IO ()
 main = do args <- getArgs 
           let n = read (head args)
-          bench n
+          void (bench n)

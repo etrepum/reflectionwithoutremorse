@@ -34,8 +34,9 @@ feedAll :: FreeMonad (Get a) b -> [a] -> Maybe b
 feedAll (toView -> Pure a) _  = Just a
 feedAll _        [] = Nothing
 feedAll (toView -> Impure (Get f))  (h : t) = feedAll (f h) t
+feedAll _ _ = error "unreachable"
 
-
+testquadratic :: Int -> Maybe Int
 testquadratic n = feedAll (addNbad n) [1..n]
 
 main :: IO ()

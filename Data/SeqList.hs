@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Data.SeqList where
 
 import Data.Interface.Sequence

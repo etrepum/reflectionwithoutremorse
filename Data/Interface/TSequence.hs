@@ -1,8 +1,8 @@
 {-# LANGUAGE GADTs,TypeSynonymInstances,FlexibleInstances #-}
-
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Data.Interface.TSequence(TSequence(..), TViewL(..), TViewR(..)) where
 
-import Data.Interface.Sequence
+-- import Data.Interface.Sequence (Sequence)
 import Control.Category
 import Prelude hiding ((.),id)
 infixr 5 <|
@@ -36,7 +36,6 @@ class TSequence s where
         TEmptyR -> tempty :|< h
         p :|< l ->  (h <| p) :|< l
 
-
 data TViewL s c x y where
    TEmptyL  :: TViewL s c x x
    (:|)     :: c x y -> s c y z -> TViewL s c x z
@@ -44,8 +43,6 @@ data TViewL s c x y where
 data TViewR s c x y where
    TEmptyR  :: TViewR s c x x
    (:|<)     :: s c x y -> c y z -> TViewR s c x z
-
-
 
 instance TSequence s => Category (s c) where
   id = tempty

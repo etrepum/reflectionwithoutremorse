@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeSynonymInstances,FlexibleInstances #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module CPS.DiffMonoid where
 
 import Data.Monoid

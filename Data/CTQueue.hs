@@ -29,6 +29,7 @@ instance TSequence q => TSequence (CTQueue q) where
     linkAll :: TSequence q =>  q (CTQueue q c) a b -> CTQueue q c a b
     linkAll v = case tviewl v of
      TEmptyL      -> C0
-     CN x q :| t  -> CN x (q `snoc` linkAll t)
+     CN x q :| t' -> CN x (q `snoc` linkAll t')
+     _            -> error "unreachable"
     snoc q C0  = q
     snoc q r   = q |> r

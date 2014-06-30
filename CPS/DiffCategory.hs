@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeSynonymInstances,Rank2Types,FlexibleInstances,UndecidableInstances #-}
 module CPS.DiffCategory where
 import Control.Category
-import Prelude hiding ((.),id)
+import Prelude ()
 
 newtype DiffCategory c a b = DiffCategory {getDC :: forall x. c x a -> c x b} 
 

@@ -7,8 +7,7 @@ import Fixed.CCT -- our fixed implementation of the above
 
 import Control.Monad.Identity
 
-
-
+test :: MonadDelimitedCont p s m => Int -> m Int
 test n = 
   do p <- newPrompt
      q <- newPrompt
@@ -24,9 +23,10 @@ test n =
      loop z | otherwise = noop >> loop (z - 1)
      noop = pushPrompt q $ pushSubCont sk $ abort q (return 0)
 
-
+main :: IO ()
 main = (return $! doTest 10000) >> return ()
 
+doTest :: Int -> Int
 doTest n = runIdentity $ runCCT $ test n
 
 {- Benchmark results for Control.Monad.CC:

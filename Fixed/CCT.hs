@@ -6,44 +6,54 @@ module Fixed.CCT(MonadDelimitedCont(..),reset,shift,control,shift0,control0,abor
 
 import Data.Interface.TSequence
 import Data.FastTCQueue
+import Control.Applicative (Applicative, pure, (<*>))
 import Control.Monad.CC hiding (Prompt,SubCont, CC, CCT, runCCT,SubCont)
-import Control.Monad.Identity
+--import Control.Monad.Identity
 import Control.Monad.State
 import Control.Monad.Reader
-import Control.Monad.Trans
+--import Control.Monad.Trans
 import Unsafe.Coerce -- for Prompt equality
 
-newtype MCont m a b = MCont { runMC :: a -> m b }
+newtype MCont m a b = MCont { _runMC :: a -> m b }
 type MCExp m a b = FastTCQueue (MCont m) a b
 
 data DelimCont r m a b = Delim (Prompt r b) (MCExp (CCT r m) a b)
 type DelimConts r m a b = FastTCQueue (DelimCont r m) a b
 data SubCont r m a b = forall w. SubCont {
-   delimited :: DelimConts r m a w,
-   top       :: MCExp (CCT r m) w b
+   _delimited :: DelimConts r m a w,
+   _top       :: MCExp (CCT r m) w b
   }
 
+emptySC :: SubCont r m b b
 emptySC = SubCont tempty tempty
 
+singleSC :: (w -> CCT r m b) -> SubCont r m w b
 singleSC f = SubCont tempty (tsingleton (MCont f))
 
 concatSC :: SubCont r m a b -> SubCont r m b c -> SubCont r m a c
 concatSC (SubCont l lt) (SubCont r rt) = case tviewl r of
   TEmptyL -> SubCont l (lt >< rt)
-  Delim p h :| t -> let r = Delim p (lt >< h) <| t
-                    in SubCont (l >< r) rt
+  Delim p h :| t -> let r' = Delim p (lt >< h) <| t
+                    in SubCont (l >< r') rt
 
 data Action r m a where
   WithSubCont :: Prompt r w -> (SubCont r m a w -> CCT r m w) -> Action r m a
   PAct :: P r m a -> Action r m a
 
 data CCT r m a = forall w. CCT { 
-   cur :: Action r m w,
-   rest :: SubCont r m w a 
+   _cur :: Action r m w,
+   _rest :: SubCont r m w a 
   }
 
 (!>>=) :: CCT r m a -> SubCont r m a b -> CCT r m b
 (CCT c r) !>>= d = CCT c (r `concatSC` d)
+
+instance Monad m => Functor (CCT r m) where
+  fmap = liftM
+
+instance Monad m => Applicative (CCT r m) where
+  pure = return
+  (<*>) = ap
 
 instance Monad m => Monad (CCT r m) where
   return a = CCT (PAct (return a)) emptySC
@@ -66,8 +76,8 @@ runCCTP :: forall m r a .Monad m => CCT r m a -> P r m a
 runCCTP (CCT c r) = case c of
   PAct m          -> m >>= runSC r
   WithSubCont p f | SubCont d l <- r -> 
-     let (sc,r) = splitSeq p d
-     in runCCTP $ f sc !>>= SubCont r l
+     let (sc,r') = splitSeq p d
+     in runCCTP $ f sc !>>= SubCont r' l
  where
   runSC :: SubCont r m w a -> w -> P r m a
   runSC (SubCont d l) x = case tviewl d of
@@ -94,7 +104,7 @@ splitSeq p q = case tviewl q of
 newtype Prompt r a = Prompt Int
 
 newtype P r m a = P { unP :: StateT Int m a }
-    deriving (Functor, Monad, MonadTrans, MonadState Int, MonadReader r)
+    deriving (Functor, Applicative, Monad, MonadTrans, MonadState Int, MonadReader r)
 
 
 runP :: (Monad m) => (forall r. P r m a) -> m a

@@ -20,8 +20,7 @@ import Control.Monad.Trans
 import Control.Monad.Logic.Class
 import qualified Data.Map as Map
 import Data.List
-import System.Environment 
-import System.IO
+import System.Environment (getArgs)
 
 
 -- Implementations of Logic:
@@ -32,14 +31,14 @@ import Fixed.Logic -- our new implementation
 
 
 bagofN :: MonadLogic m => Maybe Int -> m a -> m [a]
-bagofN (Just n) _ | n <= 0  = return []
-bagofN n m = msplit m >>= bagofN'
+bagofN (Just n') _ | n' <= 0  = return []
+bagofN n' m' = msplit m' >>= bagofN'
     where bagofN' Nothing = return []
-	  bagofN' (Just (a,m')) = bagofN (fmap (-1 +) n) m' >>= (return . (a:))
+	  bagofN' (Just (a,m'')) = bagofN (fmap (-1 +) n') m'' >>= (return . (a:))
 
 
 
-
+n, m :: Int
 n = 5				-- Dimension of the board
 m = 4				-- Number of consecutive marks needed for win
 
@@ -80,7 +79,7 @@ data Game = Game {
 		  }
 
 playGameAI :: Int -> Int -> Int -> Int -> IO ()
-playGameAI n m dlim blim = observeT $ game (X,ai) (O,ai) where
+playGameAI _n _m _dlim _blim = observeT $ game (X,ai) (O,ai) where
 
  move'loc'fn :: [(MoveFn,MoveFn)]
  move'loc'fn =
@@ -95,19 +94,19 @@ playGameAI n m dlim blim = observeT $ game (X,ai) (O,ai) where
 -- by mfn so long as new location is still marked by 'm'. Return the
 -- last location marked by 'm' and the number of the moves performed.
  extend'loc :: Board -> MoveFn -> Mark -> Loc -> (Int,Loc)
- extend'loc board mfn m loc = loop 0 loc (mfn loc)
-    where loop n loc loc' | good'loc loc',
-	                    Just m' <- Map.lookup loc' board,
-			    m' == m 
-		      = loop (n+1) loc' (mfn loc')
-	  loop n loc _ = (n,loc)
+ extend'loc board' mfn m' loc = loop 0 loc (mfn loc)
+    where loop n' _loc' loc'' | good'loc loc'',
+	                    Just m'' <- Map.lookup loc'' board',
+			    m'' == m' 
+		      = loop (n'+1) loc'' (mfn loc'')
+	  loop n' loc' _loc'' = (n',loc')
 
  max'cluster :: Board -> Mark -> Loc -> (Int,Loc)
- max'cluster board m loc = maximumBy (\ (n1,_) (n2,_) -> compare n1 n2) $
+ max'cluster board' m' loc = maximumBy (\ (n1,_) (n2,_) -> compare n1 n2) $
 			            (map cluster'dir move'loc'fn)
     where cluster'dir (mfn1,mfn2) = 
-	      let (n1,end1) = extend'loc board mfn1 m loc
-	          (n2,end2) = extend'loc board mfn2 m loc
+	      let (n1,end1) = extend'loc board' mfn1 m' loc
+	          (n2,_end2) = extend'loc board' mfn2 m' loc
 	      in (n1+n2+1,end1)
 
 
@@ -118,10 +117,11 @@ playGameAI n m dlim blim = observeT $ game (X,ai) (O,ai) where
 		  moves = map (\[x,y] ->(x,y)) $ sequence [[0..n-1],[0..n-1]],
 		  board = Map.empty}
 
+{-
  show'board fm = concatMap showrow [0..n-1]
     where showrow i = concatMap (showmark i) [0..n-1] ++ "\n"
 	  showmark i j = maybe " ." ((' ':) . show) $ Map.lookup (i,j) fm
-
+-}
 
 -- Account for the move into location the 'loc' by the player 'p'
 
@@ -129,8 +129,8 @@ playGameAI n m dlim blim = observeT $ game (X,ai) (O,ai) where
  take'move p loc g = 
     Game { moves = delete loc (moves g),
 	   board = board',
-	   winner = let (n,l) = max'cluster board' p loc
-                    in if n >= m then Just (l,p) else Nothing
+	   winner = let (n',l) = max'cluster board' p loc
+                    in if n' >= m then Just (l,p) else Nothing
 	 }
   where
      board' = Map.insert loc p (board g)
@@ -144,7 +144,7 @@ playGameAI n m dlim blim = observeT $ game (X,ai) (O,ai) where
  game player1 player2
      = game' player1 player2 new'game
      where
-         game' player@(p,proc) other'player g
+         game' player@(p,proc) other'player' g
              | Game{winner=Just k} <- g
                  = liftIO (putStrLn $ (show k) ++ " wins!")
              | Game{moves=[]} <- g
@@ -153,9 +153,10 @@ playGameAI n m dlim blim = observeT $ game (X,ai) (O,ai) where
                  = do
                      (_,g') <- once (proc p g)
                      -- liftIO (putStrLn $ show'board (board g'))
-                     game' other'player player g'
+                     game' other'player' player g'
 
 
+{-
 -- Play as a human
  human'player :: (MonadIO (t m), MonadTrans t) => PlayerProc t m
  human'player p g = do
@@ -167,7 +168,7 @@ playGameAI n m dlim blim = observeT $ game (X,ai) (O,ai) where
     l@(i,j) <- loop
     if elem l (moves g) then return (1,(take'move p l g))
        else (liftIO $ putStrLn "Bad Move") >> human'player p g
-
+-}
 -- ----------------------------------------------------------------------
 --				Heuristics
 
@@ -189,8 +190,8 @@ for us.
     | otherwise
         = do
             wbs <- bagofN Nothing (do
-                m   <- choose (moves g)
-                let g' = take'move p m g
+                m'   <- choose (moves g)
+                let g' = take'move p m' g
                 (w,_) <- ai (other'player p) g'
                 return (-w,g'))
             let (w,g') = maximumBy (\ (x,_) (y,_) -> compare x y) wbs
@@ -230,14 +231,13 @@ The second is that if the first heuristic doesn't work, then you should
 see if there is any move that your opponent could make where they could
 win on the next move.  If so, you should move to block it.
 -}
-
+{-
  first'move'wins p g =
     do
     m <- choose (moves g)
     let g' = take'move p m g
     guard (maybe False (\ (_,p') -> p' == p) (winner g'))
     return (m,(score'win,g'))
-
 
  minmax :: (Monad m, MonadLogic (t m)) =>
 	  (Int->Int->PlayerProc t m) -> (Int->Int->PlayerProc t m)
@@ -271,12 +271,14 @@ win on the next move.  If so, you should move to block it.
                   (w,_) <- ai'lim dlim blim (other'player p) g'
                   return (-w,g'))
 	      (minmax ai'lim dlim blim p g))
+-}
 
 
+main :: IO ()
 main = do args <- getArgs 
-          let n = read (head args)
-          let m = read (head (tail args))
+          let n' = read (head args)
+          let m' = read (head (tail args))
           let dlim = read (head (tail $ tail args))
           let blim = read (head (tail $ tail $ tail args))
-          playGameAI n m dlim blim
+          playGameAI n' m' dlim blim
 

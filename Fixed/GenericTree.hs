@@ -27,5 +27,5 @@ toView (TreeD x s) = case x of
              TC h :| t  -> toView $ (h a) <.|| t
   Node l r -> Node (l <.|| s) (r <.|| s)
   where (<.||) :: TreeD a -> TreeCExp a b -> TreeD b
-        (TreeD x l) <.|| r = TreeD x (l >< r)
+        (TreeD x' l) <.|| r = TreeD x' (l >< r)
 

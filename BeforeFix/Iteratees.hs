@@ -1,15 +1,25 @@
 module BeforeFix.Iteratees where
 import Control.Monad
+import Control.Applicative
 
 data It i a 
   = Get (i -> It i a)
   | Done a
 
+instance Functor (It i) where
+  fmap f (Done x) = Done (f x)
+  fmap f (Get g)  = Get (fmap (fmap f) g)
+
+instance Applicative (It i) where
+  pure = Done
+  (<*>) = ap
+
 instance Monad (It i) where
-  return = Done
+  return = pure
   (Done x)  >>= g = g x
   (Get f)   >>= g = Get ((>>= g) . f)
 
+get :: It a a
 get = Get return
 
 race :: It i a -> It i b -> It i (It i a, It i b)
@@ -19,6 +29,7 @@ race l r
   | Get f <- l, Get g <- r =
     do x <- get
        race (f x) (g x)
+  | otherwise = error "unreachable"
 
 
 

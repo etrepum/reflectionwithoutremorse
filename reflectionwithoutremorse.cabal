@@ -29,7 +29,7 @@ library
                      , CC-delcont >= 0.2 && <0.3
   -- hs-source-dirs:      
   default-language:    Haskell2010
-  ghc-options:         -Wall -Werror
+  ghc-options:         -Wall -Werror -O2
 
 executable DelimCCBenchmark
   main-is: DelimCCBenchmark.hs
@@ -38,24 +38,28 @@ executable DelimCCBenchmark
                , mtl >=2.1 && <2.3
                , CC-delcont >= 0.2 && <0.3
   default-language:    Haskell2010
+  ghc-options:         -Wall -Werror -O2 -rtsopts -threaded
 
 executable EffBenchmark
   main-is: EffBenchmark.hs
   build-depends: reflectionwithoutremorse
                , base >= 4.7 && <4.8
   default-language:    Haskell2010
+  ghc-options:         -Wall -Werror -O2 -rtsopts -threaded
 
 executable FreeMonadBenchmark
   main-is: FreeMonadBenchmark.hs
   build-depends: reflectionwithoutremorse
                , base >= 4.7 && <4.8
   default-language:    Haskell2010
+  ghc-options:         -Wall -Werror -O2 -rtsopts -threaded
 
 executable IterateesBench
   main-is: FreeMonadBenchmark.hs
   build-depends: reflectionwithoutremorse
                , base >= 4.7 && <4.8
   default-language:    Haskell2010
+  ghc-options:         -Wall -Werror -O2 -rtsopts -threaded
 
 executable LogicBenchMplus
   main-is: LogicBenchMplus.hs
@@ -65,6 +69,7 @@ executable LogicBenchMplus
                , logict >= 0.6 && <0.7
                , transformers >= 0.3 && <0.5
   default-language:    Haskell2010
+  ghc-options:         -Wall -Werror -O2 -rtsopts -threaded
 
 executable LogicBenchReflect
   main-is: LogicBenchReflect.hs
@@ -74,6 +79,7 @@ executable LogicBenchReflect
                , logict >= 0.6 && <0.7
                , transformers >= 0.3 && <0.5
   default-language:    Haskell2010
+  ghc-options:         -Wall -Werror -O2 -rtsopts -threaded
 
 executable LogicBenchReflectDouble
   main-is: LogicBenchReflectDouble.hs
@@ -83,6 +89,7 @@ executable LogicBenchReflectDouble
                , logict >= 0.6 && <0.7
                , transformers >= 0.3 && <0.5
   default-language:    Haskell2010
+  ghc-options:         -Wall -Werror -O2 -rtsopts -threaded
 
 executable MCPT
   main-is: MCPT.hs
@@ -92,6 +99,7 @@ executable MCPT
                , logict >= 0.6 && <0.7
                , transformers >= 0.3 && <0.5
   default-language:    Haskell2010
+  ghc-options:         -Wall -Werror -O2 -rtsopts -threaded
 
 executable Median
   main-is: Median.hs
@@ -101,6 +109,7 @@ executable Median
                , logict >= 0.6 && <0.7
                , transformers >= 0.3 && <0.5
   default-language:    Haskell2010
+  ghc-options:         -Wall -Werror -O2 -rtsopts -threaded
 
 executable TicTacToe
   main-is: TicTacToe.hs
@@ -111,6 +120,7 @@ executable TicTacToe
                , transformers >= 0.3 && <0.5
                , containers >= 0.5 && <0.6
   default-language:    Haskell2010
+  ghc-options:         -Wall -Werror -O2 -rtsopts -threaded
 
 executable TreeShow
   main-is: TreeShow.hs
@@ -118,3 +128,4 @@ executable TreeShow
                , base >= 4.7 && <4.8
                , deepseq >= 1.3 && <1.4
   default-language:    Haskell2010
+  ghc-options:         -Wall -Werror -O2 -rtsopts -threaded

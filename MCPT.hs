@@ -7,12 +7,9 @@ Adapted from the LogicT code at http://okmij.org/ftp/Haskell/LogicT.tar.gz
 
 
 import Control.Monad
-import Control.Monad.Trans
-import System.Environment 
-import System.IO
+import System.Environment (getArgs)
 
 import Control.Monad.Logic.Class
-import Control.Monad.Identity
 -- the three implementations of Logic:
 
 import Fixed.Logic -- our new implementation
@@ -27,13 +24,6 @@ import Fixed.Logic -- our new implementation
 -- Constraint: cannibals never outnumber missionaries in any place
 -- For more details on the problem, see:
 -- http://www.cs.berkeley.edu/~russell/code/search/domains/cannibals.lisp
-
-
-bagofN :: MonadLogic m => Maybe Int -> m a -> m [a]
-bagofN (Just n) _ | n <= 0  = return []
-bagofN n m = msplit m >>= bagofN'
-    where bagofN' Nothing = return []
-	  bagofN' (Just (a,m')) = liftM (a:) (bagofN (fmap (-1 +) n) m')
 
 -- (M,C,B) on each side of the river
 type Left  = (Int,Int,Int)
@@ -71,7 +61,7 @@ move _ _ = mzero
 
 -- Check the newly reached state. Fail if it is bad
 check :: MonadPlus m => State -> m State
-check s@((m1,c1,b1),(m2,c2,b2)) = 
+check s@((m1,c1,_b1),(m2,c2,_b2)) = 
     if and [m1 >= 0, m2 >= 0, c1 >= 0, c2 >= 0, 
 	    (m1 == 0 || c1 <= m1),	-- If there are missionaries, there
 					-- should be at least as many 
@@ -83,9 +73,10 @@ check s@((m1,c1,b1),(m2,c2,b2)) =
 -- non-deterministically, choose an element from a list
 -- Obviously, we fail if the list is empty.
 -- This function is obviously a manifestation of the Axiom of Choice
-choose:: MonadPlus m => [a] -> m a
+choose :: MonadPlus m => [a] -> m a
 choose = msum . map return
 
+occurs :: (MonadPlus m, Eq b) => b -> [b] -> m b
 occurs e lst = do { e' <- choose lst; if e == e' then return e else mzero }
 
 -- The first solution: Depth-first-search
@@ -97,6 +88,7 @@ data SearchS = SearchS State     -- Current state
 instance Show SearchS where
     show (SearchS _ _ actions) = show actions
 
+solve_dfs :: MonadLogic m => SearchS -> m SearchS
 solve_dfs (SearchS current seen actions) = 
     do 
     a     <- choose legalActions
@@ -111,11 +103,12 @@ solve_dfs (SearchS current seen actions) =
 	       (solve_dfs news))
 
 
-do'solve nr left = result >>= (print . show . length) 
+do'solve :: t -> Left -> IO ()
+do'solve _nr left = result >>= (print . show . length) 
       where s = (left, (0,0,0))
 	    result = observeAllT$ solve_dfs (SearchS s [s] []) 
 
-
+main :: IO ()
 main = do args <- getArgs 
           let n = read (head args)
           let m = read (head (tail args))

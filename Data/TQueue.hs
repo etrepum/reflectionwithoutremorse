@@ -39,7 +39,7 @@ instance TSequence Q where
     QN (B2 (a :* b)) m r  -> a :| QN (B1 b) m r
     QN (B1 a) m r         -> a :| shiftLeft m r
     where  shiftLeft :: Q (P c) a w -> B c w b -> Q c a b
-           shiftLeft q r = case tviewl q of
+           shiftLeft q' r = case tviewl q' of
                TEmptyL -> buf2queue r
                l :| m -> QN (B2 l) m r
            buf2queue (B1 a)        = Q1 a

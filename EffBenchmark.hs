@@ -11,13 +11,9 @@ import Fixed.Eff
 
 {- A benchmark for extensible effects -}
 
-import System.Environment 
-import System.IO
-import Control.Monad
 import Data.OpenUnion1
-import Data.Typeable
 
-
+cutEm :: Member Choose r => Int -> Eff r Int -> Eff r Int
 cutEm n m | n == 0 = m
           | otherwise =  ifte (cutEm (n-1) m) return (return 1)
 
@@ -26,6 +22,8 @@ test
       Member (State Int) r) =>
      Int -> Eff r Int
 test  n = cutEm n (return 1 `mplus'` (buildStack n >> get))
+
+runTest :: Int -> Int
 runTest n =  snd $ run $ runState (makeChoice  (test n)) (0 :: Int)
 
 modify :: Member (State Int) r => (Int -> Int) -> Eff r ()

@@ -3,6 +3,9 @@ module Fixed.Iteratees where
 import Data.Interface.TSequence
 import Data.FastTCQueue
 
+import Control.Applicative (Applicative, pure, (<*>))
+import Control.Monad (liftM, ap)
+
 type TCQueue = FastTCQueue
 
 newtype IC i a b = IC (a -> It i b)
@@ -10,6 +13,8 @@ type IExp i a b = TCQueue (IC i) a b
 data It i a = forall x. It (ItView i x) (IExp i x a)
 data ItView i a 	= Done a 
                         | Get (i -> It i a)
+
+fromView :: ItView i a -> It i a
 fromView x = It x tempty
 
 toView :: It i a -> ItView i a
@@ -20,7 +25,14 @@ toView (It h t) = case h of
        IC hc :| tc -> toView (hc x >>>= tc)
    Get f -> Get ((>>>= t) . f) 
  where (>>>=) :: It i a -> IExp i a b -> It i b 
-       (It h t) >>>= r = It h (t >< r)
+       (It h' t') >>>= r = It h' (t' >< r)
+
+instance Functor (It i) where
+  fmap = liftM
+
+instance Applicative (It i) where
+  pure = return
+  (<*>) = ap
 
 instance Monad (It i) where
   return = fromView . Done
@@ -36,12 +48,13 @@ race (toView -> l) (toView -> r)
   | Get f <- l, Get g <- r =
     do x <- get
        race (f x) (g x)
-
+  | otherwise = error "unreachable"
 
 feedAll :: It  a b -> [a] -> Maybe b
-feedAll (toView ->Done a) _  = Just a
+feedAll (toView -> Done a) _  = Just a
 feedAll _        [] = Nothing
 feedAll (toView -> Get f)  (h : t) = feedAll (f h) t
+feedAll _ _ = error "unreachable"
 
 
 {-

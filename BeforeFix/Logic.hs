@@ -4,11 +4,23 @@ module BeforeFix.Logic where
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Logic.Class
-import Control.Monad.IO.Class
+import Control.Applicative
+-- import Control.Monad.IO.Class
 
 newtype ML m a = ML { toView :: m (Maybe (a, ML m a)) } 
+
+fromView :: m (Maybe (a, ML m a)) -> ML m a
 fromView = ML
+
+single :: (MonadPlus m1, Monad m) => t -> m (Maybe (t, m1 a))
 single a = return (Just (a,mzero))
+
+instance Monad m => Functor (ML m) where
+  fmap = liftM
+
+instance Monad m => Applicative (ML m) where
+  pure = return
+  (<*>) = ap
 
 instance Monad m => Monad (ML m) where
   return = fromView . single
@@ -16,6 +28,10 @@ instance Monad m => Monad (ML m) where
        Nothing    -> return Nothing
        Just (h,t) -> toView (f h `mplus` (t >>= f))
   fail _ = mzero
+
+instance Monad m => Alternative (ML m) where
+  (<|>) = mplus
+  empty = mzero
 
 instance Monad m => MonadPlus (ML m) where
   mzero = fromView (return Nothing)
@@ -35,7 +51,7 @@ observeAllT (toView -> m) = m >>= get where
 
 observeT :: Monad m => ML m a -> m a
 observeT (toView -> m) = m >>= get where
-      get (Just (a,t)) = return a
+      get (Just (a,_t)) = return a
       get _            = fail "No results"
 
 

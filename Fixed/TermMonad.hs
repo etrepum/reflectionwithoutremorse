@@ -3,6 +3,9 @@ module Fixed.TermMonad(TermM,TermMView(..), fromView, toView) where
 
 import Data.Interface.TSequence
 import Data.FastTCQueue
+import Control.Applicative (Applicative, (<*>), pure)
+import Control.Monad (liftM, ap)
+
 type TCQueue = FastTCQueue
 
 newtype TermMCont r a b = TC (a -> TermM r b)
@@ -22,9 +25,16 @@ toView (TermM x s) = case x of
   Return a -> case tviewl s of 
              TEmptyL -> Return a
              TC h :| t  -> toView $ (h a) <.|| t
-  Bind t f -> Bind t (\x -> f x <.|| s) 
+  Bind t f -> Bind t (\x' -> f x' <.|| s) 
   where (<.||) :: TermM r a -> TermCExp r a b -> TermM r b
-        (TermM x l) <.|| r = TermM x (l >< r)
+        (TermM x' l) <.|| r = TermM x' (l >< r)
+
+instance Functor (TermM r) where
+  fmap = liftM
+
+instance Applicative (TermM r) where
+  pure = return
+  (<*>) = ap
 
 instance Monad (TermM r) where
   return = fromView . Return

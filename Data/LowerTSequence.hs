@@ -30,10 +30,10 @@ instance TSequence s => Sequence (MSeq s) where
 
 
 instance TSequence s => Functor (MSeq s) where
-  fmap f = map where
-   map q = case viewl q of
+  fmap f = map' where
+   map' q = case viewl q of
      EmptyL -> empty
-     h :< t -> f h .<| map t 
+     h :< t -> f h .<| map' t 
 
 instance TSequence s => Foldable (MSeq s) where
   foldMap f = fm where
