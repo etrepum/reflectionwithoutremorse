@@ -1,2 +1,2 @@
 #!/bin/bash
-./LogicBenchMplus $1 > /dev/null
+./dist/build/LogicBenchMplus/LogicBenchMplus $1 > /dev/null
