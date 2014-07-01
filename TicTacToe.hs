@@ -31,16 +31,15 @@ import Fixed.Logic -- our new implementation
 
 
 bagofN :: MonadLogic m => Maybe Int -> m a -> m [a]
-bagofN (Just n') _ | n' <= 0  = return []
-bagofN n' m' = msplit m' >>= bagofN'
+bagofN (Just n) _ | n <= 0  = return []
+bagofN n m = msplit m >>= bagofN'
     where bagofN' Nothing = return []
-	  bagofN' (Just (a,m'')) = bagofN (fmap (-1 +) n') m'' >>= (return . (a:))
+	  bagofN' (Just (a,m')) = bagofN (fmap (-1 +) n) m' >>= (return . (a:))
 
 
 
-n, m :: Int
-n = 5				-- Dimension of the board
-m = 4				-- Number of consecutive marks needed for win
+-- n = 5				-- Dimension of the board
+-- m = 4				-- Number of consecutive marks needed for win
 
 -- ----------------------------------------------------------------------
 --			Representation of the board
@@ -72,14 +71,14 @@ type MoveFn = Loc -> Loc
 data Game = Game {
 		  -- The location and the mark of the
 		  -- player who first achieved the goal
-		  winner :: Maybe (Loc,Mark),
+		  gWinner :: Maybe (Loc,Mark),
 		  -- The list of empty locations
-		  moves  :: [Loc],
-		  board  :: Board
+		  gMoves  :: [Loc],
+		  gBoard  :: Board
 		  }
 
 playGameAI :: Int -> Int -> Int -> Int -> IO ()
-playGameAI _n _m _dlim _blim = observeT $ game (X,ai) (O,ai) where
+playGameAI n m _dlim _blim = observeT $ game (X,ai) (O,ai) where
 
  move'loc'fn :: [(MoveFn,MoveFn)]
  move'loc'fn =
@@ -94,28 +93,29 @@ playGameAI _n _m _dlim _blim = observeT $ game (X,ai) (O,ai) where
 -- by mfn so long as new location is still marked by 'm'. Return the
 -- last location marked by 'm' and the number of the moves performed.
  extend'loc :: Board -> MoveFn -> Mark -> Loc -> (Int,Loc)
- extend'loc board' mfn m' loc = loop 0 loc (mfn loc)
+ extend'loc board mfn m' loc = loop 0 loc (mfn loc)
     where loop n' _loc' loc'' | good'loc loc'',
-	                    Just m'' <- Map.lookup loc'' board',
+	                    Just m'' <- Map.lookup loc'' board,
 			    m'' == m' 
 		      = loop (n'+1) loc'' (mfn loc'')
-	  loop n' loc' _loc'' = (n',loc')
+	  loop n' loc' _ = (n',loc')
 
  max'cluster :: Board -> Mark -> Loc -> (Int,Loc)
- max'cluster board' m' loc = maximumBy (\ (n1,_) (n2,_) -> compare n1 n2) $
+ max'cluster board m' loc = maximumBy (\ (n1,_) (n2,_) -> compare n1 n2) $
 			            (map cluster'dir move'loc'fn)
     where cluster'dir (mfn1,mfn2) = 
-	      let (n1,end1) = extend'loc board' mfn1 m' loc
-	          (n2,_end2) = extend'loc board' mfn2 m' loc
+	      let (n1,end1) = extend'loc board mfn1 m' loc
+	          (n2,_end2) = extend'loc board mfn2 m' loc
 	      in (n1+n2+1,end1)
 
 
 
 
  new'game :: Game
- new'game = Game { winner = Nothing,
-		  moves = map (\[x,y] ->(x,y)) $ sequence [[0..n-1],[0..n-1]],
-		  board = Map.empty}
+ new'game = Game { gWinner = Nothing
+                 , gMoves = map (\[x,y] ->(x,y)) $ sequence [[0..n-1],[0..n-1]]
+                 , gBoard = Map.empty
+                 }
 
 {-
  show'board fm = concatMap showrow [0..n-1]
@@ -127,13 +127,13 @@ playGameAI _n _m _dlim _blim = observeT $ game (X,ai) (O,ai) where
 
  take'move :: Mark -> Loc -> Game -> Game
  take'move p loc g = 
-    Game { moves = delete loc (moves g),
-	   board = board',
-	   winner = let (n',l) = max'cluster board' p loc
+    Game { gMoves = delete loc (gMoves g)
+         , gBoard = board'
+         , gWinner = let (n',l) = max'cluster board' p loc
                     in if n' >= m then Just (l,p) else Nothing
 	 }
   where
-     board' = Map.insert loc p (board g)
+     board' = Map.insert loc p (gBoard g)
 
 
 -- The main game-playing function
@@ -145,16 +145,15 @@ playGameAI _n _m _dlim _blim = observeT $ game (X,ai) (O,ai) where
      = game' player1 player2 new'game
      where
          game' player@(p,proc) other'player' g
-             | Game{winner=Just k} <- g
+             | Game{gWinner=Just k} <- g
                  = liftIO (putStrLn $ (show k) ++ " wins!")
-             | Game{moves=[]} <- g
+             | Game{gMoves=[]} <- g
                  = liftIO (putStrLn "Draw!")
              | otherwise
                  = do
                      (_,g') <- once (proc p g)
                      -- liftIO (putStrLn $ show'board (board g'))
                      game' other'player' player g'
-
 
 {-
 -- Play as a human
@@ -165,8 +164,8 @@ playGameAI _n _m _dlim _blim = observeT $ game (X,ai) (O,ai) where
 	       \s -> case (reads s) of
 			[(l,"")] -> return l
 			_ -> (liftIO $ putStrLn "Parse Error") >> loop
-    l@(i,j) <- loop
-    if elem l (moves g) then return (1,(take'move p l g))
+    l@(_i,_j) <- loop
+    if elem l (gMoves g) then return (1,(take'move p l g))
        else (liftIO $ putStrLn "Bad Move") >> human'player p g
 -}
 -- ----------------------------------------------------------------------
@@ -183,14 +182,14 @@ for us.
 
  ai :: (MonadLogic (t m)) => PlayerProc t m
  ai p g
-    | Game{winner=Just _} <- g
+    | Game{gWinner=Just _} <- g
         = return (estimate'state p g,g)
-    | Game{moves=[]} <- g
+    | Game{gMoves=[]} <- g
         = return (estimate'state p g,g)
     | otherwise
         = do
             wbs <- bagofN Nothing (do
-                m'   <- choose (moves g)
+                m'   <- choose (gMoves g)
                 let g' = take'move p m' g
                 (w,_) <- ai (other'player p) g'
                 return (-w,g'))
@@ -209,9 +208,9 @@ for us.
 -- the more the better
  estimate'state :: Mark -> Game -> Int
  estimate'state p g 
-    | Game{winner=Just (_,p')} <- g
+    | Game{gWinner=Just (_,p')} <- g
         = if p == p' then score'win  else score'lose
-    | Game{moves=[]} <- g
+    | Game{gMoves=[]} <- g
         = 0				-- draw
     | otherwise = 10
  score'win = maxBound
@@ -231,21 +230,24 @@ The second is that if the first heuristic doesn't work, then you should
 see if there is any move that your opponent could make where they could
 win on the next move.  If so, you should move to block it.
 -}
+
 {-
  first'move'wins p g =
     do
-    m <- choose (moves g)
+    m <- choose (gMoves g)
     let g' = take'move p m g
-    guard (maybe False (\ (_,p') -> p' == p) (winner g'))
+    guard (maybe False (\ (_,p') -> p' == p) (gWinner g'))
     return (m,(score'win,g'))
+-}
 
+{-
  minmax :: (Monad m, MonadLogic (t m)) =>
 	  (Int->Int->PlayerProc t m) -> (Int->Int->PlayerProc t m)
  minmax self dlim blim p g =
     do
     wbs <- bagofN (Just blim)
 	   (do
-            m   <- choose (moves g)
+            m   <- choose (gMoves g)
             let g' = take'move p m g
 	    if dlim <= 0 then return (estimate'state p g',g')
 	       else do (w,_) <- self (dlim-1) blim 
@@ -253,7 +255,9 @@ win on the next move.  If so, you should move to block it.
 		       return (-w,g'))
     let (w,g') = maximumBy (\ (x,_) (y,_) -> compare x y) wbs
     return (w,g')
+-}
 
+{-
  ai' :: (MonadLogic (t m), Monad m) => PlayerProc t m
  ai' p g = ai'lim dlim blim p g
   where 
@@ -273,12 +277,10 @@ win on the next move.  If so, you should move to block it.
 	      (minmax ai'lim dlim blim p g))
 -}
 
-
 main :: IO ()
-main = do args <- getArgs 
-          let n' = read (head args)
-          let m' = read (head (tail args))
-          let dlim = read (head (tail $ tail args))
-          let blim = read (head (tail $ tail $ tail args))
-          playGameAI n' m' dlim blim
+main = do (n, m, dlim, blim) <- fmap (defaults . map read) getArgs
+          playGameAI n m dlim blim
+  where defaults [n, m, dlim, blim] = (n, m, dlim, blim)
+        defaults []                 = (3, 3, 0, 0)
+        defaults _                  = error "expecting 4 arguments"
 
